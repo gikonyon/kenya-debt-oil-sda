@@ -1,4 +1,4 @@
-Kenya: oil shocks, domestic debt and fiscal space
+*Kenya: oil shocks, domestic debt and fiscal space*
 Interactive companion to a working paper using a stochastic debt sustainability analysis.
 Run locally:
     pip install -r requirements.txt
