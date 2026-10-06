@@ -1,4 +1,4 @@
-#*Kenya: oil shocks, domestic debt and fiscal space*#
+#*Kenya: Oil shocks, domestic debt and fiscal space*#
  
 Interactive companion to a working paper using a stochastic debt sustainability analysis.
 Run locally:
