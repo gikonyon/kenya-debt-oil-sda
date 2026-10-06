@@ -43,9 +43,14 @@ class Params:
     pb: float = -0.5
     consolidation: float = 0.0   # extra primary balance improvement per year, pp of GDP
     dom_fin_share: float = 0.7   # share of primary deficit financed domestically
+    phi: float = 0.0             # primary balance response to debt: pp of GDP per pp of debt above start (0 = no response)
 
 
 def simulate(p: Params, n: int = 5000, seed: int = 0):
+    if p.horizon < 1 or n < 1:
+        raise ValueError("horizon and n must be at least 1")
+    if not 0 <= p.dom_share0 <= 1 or not 0 <= p.dom_fin_share <= 1:
+        raise ValueError("shares must be between 0 and 1")
     rng = np.random.default_rng(seed)
     H = p.horizon
     ln_p = np.full(n, np.log(p.oil0))
@@ -69,7 +74,7 @@ def simulate(p: Params, n: int = 5000, seed: int = 0):
         dep = p.dep_base + p.b_fx * x
         i_d = p.i_dom + p.b_yield * (pi - p.pi_base)
         g_nom = (1 + g / 100) * (1 + pi / 100) - 1
-        pb = p.pb + p.consolidation * t
+        pb = p.pb + p.phi * (dom + ext - p.debt0) + p.consolidation * t
 
         dom = dom * (1 + i_d / 100) / (1 + g_nom) - p.dom_fin_share * pb
         ext = ext * (1 + p.i_ext / 100) * (1 + dep / 100) / (1 + g_nom) - (1 - p.dom_fin_share) * pb
