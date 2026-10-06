@@ -1,0 +1,12 @@
+{
+  "_note": "Fill from National Treasury / CBK data. Leave null to keep defaults. Effective rate = interest paid / prior-year debt stock.",
+  "debt0": null,
+  "dom_share0": null,
+  "i_dom": null,
+  "i_ext": null,
+  "pb": null,
+  "dom_fin_share": null,
+  "tb0": null,
+  "phi": null,
+  "yield_beta": null
+}
