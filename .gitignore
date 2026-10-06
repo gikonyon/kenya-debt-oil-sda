@@ -1,8 +1,14 @@
-  data/*.csv
-  !data/*_TEMPLATE.csv
-  fan_chart_data.csv
-  scenarios.csv
-  backtest*.csv
-  results_table*.csv
-  params*.json
-  __pycache__/
+# data and outputs: add real data deliberately, and check licence terms first
+data/*.csv
+!data/*_TEMPLATE.csv
+raw/
+fan_chart_data.csv
+scenarios.csv
+backtest*.csv
+results_table*.csv
+frf_result.json
+params*.json
+__pycache__/
+.pytest_cache/
+*.pyc
+.venv/
