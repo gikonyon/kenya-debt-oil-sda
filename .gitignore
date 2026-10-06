@@ -1,0 +1,8 @@
+  data/*.csv
+  !data/*_TEMPLATE.csv
+  fan_chart_data.csv
+  scenarios.csv
+  backtest*.csv
+  results_table*.csv
+  params*.json
+  __pycache__/
