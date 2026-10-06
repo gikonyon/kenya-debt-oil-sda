@@ -13,7 +13,7 @@ Run:  python model_v2.py --monthly data/monthly.csv --gdp data/quarterly.csv --a
 Outputs: fan_chart_data.csv, scenarios.csv, backtest.csv, backtest_summary.csv
 No result is meaningful unless inputs are real, complete series.
 """
-import argparse, json, os
+import argparse, json, os, warnings
 from dataclasses import dataclass
 import numpy as np
 import pandas as pd
@@ -68,6 +68,8 @@ def fit_var(panel, maxlags=4):
     res = VAR(p).fit(maxlags=maxlags, ic="aic")
     if res.k_ar < 1:
         res = VAR(p).fit(1)
+    if not res.is_stable():
+        warnings.warn("The estimated VAR is not stable; simulated paths may explode. Check the data and lag length.")
     return res, p
 
 
@@ -138,6 +140,9 @@ def backtest(panel, annual, origins, horizon=5, n=2000, base: Fiscal = None):
     for o in origins:
         cutoff = pd.Timestamp(f"{o}-06-30")
         pan = panel.loc[:cutoff]
+        if o not in annual.index or len(pan[VARS].dropna()) < 40:
+            print(f"Skipping origin {o}: not in annual file or fewer than 40 quarters of data.")
+            continue
         a = annual.loc[o]
         f = Fiscal(**{**base.__dict__, "debt0": a["debt"], "dom_share0": a["dom"] / a["debt"],
                       "i_dom": a["i_dom"], "i_ext": a["i_ext"], "pb": a["pb"],
@@ -168,6 +173,7 @@ if __name__ == "__main__":
     ap.add_argument("--threshold", type=float, default=75.0)
     ap.add_argument("--origins", type=int, nargs="*", default=[])
     ap.add_argument("--n", type=int, default=5000)
+    ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args()
 
     panel = quarterly_panel(a.monthly, a.gdp)
@@ -176,7 +182,7 @@ if __name__ == "__main__":
     if "tb0" not in fj:
         f.tb0 = float(panel["tb_level"].dropna().iloc[-1])
 
-    base = forecast(panel, f, a.horizon, n=a.n)
+    base = forecast(panel, f, a.horizon, n=a.n, seed=a.seed)
     q = np.percentile(base, [10, 25, 50, 75, 90], axis=0)
     pd.DataFrame(q.T, columns=["p10", "p25", "p50", "p75", "p90"]).to_csv("fan_chart_data.csv", index_label="year")
 
@@ -184,14 +190,18 @@ if __name__ == "__main__":
     for label, shock in [("Oil -20% shock", -20.0), ("Baseline (no extra shock)", 0.0), ("Oil +20% shock", 20.0), ("Oil +40% shock", 40.0)]:
         for cons in [0.0, 0.5, 1.0]:
             ff = Fiscal(**{**f.__dict__, "consolidation": cons})
-            s = forecast(panel, ff, a.horizon, n=a.n, oil_shock_pct=shock)
+            s = forecast(panel, ff, a.horizon, n=a.n, oil_shock_pct=shock, seed=a.seed)
             rows.append({"scenario": label, "extra_consolidation_pp": cons, "median_end": round(float(np.median(s[:, -1])), 1),
                          "p_above_end": round(float((s[:, -1] > a.threshold).mean()), 3),
                          "p_above_any": round(float((s[:, 1:].max(1) > a.threshold).mean()), 3)})
     pd.DataFrame(rows).to_csv("scenarios.csv", index=False)
 
     if a.origins:
-        annual = pd.read_csv(a.annual).set_index("fy_end")
+        annual = pd.read_csv(a.annual)
+        need = {"fy_end", "debt", "dom", "ext", "i_dom", "i_ext", "pb"}
+        if not need <= set(annual.columns):
+            raise SystemExit(f"annual file is missing columns: {sorted(need - set(annual.columns))}")
+        annual = annual.set_index("fy_end")
         bt, summ = backtest(panel, annual, a.origins, a.horizon, n=min(a.n, 2000), base=f)
         bt.to_csv("backtest.csv", index=False)
         summ.to_csv("backtest_summary.csv", index=False)
